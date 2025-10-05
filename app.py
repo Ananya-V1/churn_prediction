@@ -21,6 +21,8 @@ with open('scaler.pkl', 'rb') as file:
 # Streamlit app
 st.title('Customer Churn Prediction')
 
+st.subheader("Please input the following data so a prediction can be made:")
+
 # User input
 geography = st.selectbox('Geography', onehot_encoder_geo.categories_[0])
 gender = st.selectbox('Gender', label_encoder_gender.classes_)
@@ -51,16 +53,16 @@ geo_encoded = onehot_encoder_geo.transform([[geography]]).toarray()
 geo_encoded_df = pd.DataFrame(geo_encoded, columns=onehot_encoder_geo.get_feature_names_out(['Geography']))
 
 # Combine one-hot encoded columns with input data
-input_data = pd.concat([input_data.reset_index(drop=True), geo_encoded_df], axis=1)
+input = pd.concat([input_data.reset_index(drop=True), geo_encoded_df], axis=1)
 
 # Scale the input data
-input_data_scaled = scaler.transform(input_data)
+input_scaled = scaler.transform(input)
 
 # Predict churn
-prediction = model.predict(input_data_scaled)
-prediction_proba = prediction[0][0]
+prediction = model.predict(input_scaled)
+prediction_prob = prediction[0][0]
 
-if prediction_proba > 0.5:
+if prediction_prob > 0.5:
     st.write('The customer is likely to churn.')
 else:
     st.write('The customer is not likely to churn.')
