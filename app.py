@@ -5,8 +5,11 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder
 import pandas as pd 
 import pickle
 
-# Load the trained model
+# Load the trained models
 model = tf.keras.models.load_model('model.h5')
+
+with open('gb_churn_model.pkl', 'rb') as file:
+    gb_model = pickle.load(file)
 
 # Load the encoders and scaler
 with open('onehot_encoder_geo.pkl', 'rb') as file:
@@ -23,11 +26,13 @@ st.title('Customer Churn Prediction')
 
 st.markdown("### About this app")
 st.write("""
-This tool predicts customer churn using a trained deep learning model.
+This tool predicts customer churn using a trained deep learning model or a gradient boosting model.
 It helps businesses identify high-risk customers and take proactive retention actions.
 """)
 
 st.subheader("Please input the following data so a prediction can be made:")
+
+model_choice = st.selectbox('Model', ['Gradient Boosting', 'ANN'])
 
 # User input
 st.subheader("👤 Demographic Information")
@@ -70,12 +75,15 @@ geo_encoded_df = pd.DataFrame(geo_encoded, columns=onehot_encoder_geo.get_featur
 # Combine one-hot encoded columns with input data
 input = pd.concat([input_data.reset_index(drop=True), geo_encoded_df], axis=1)
 
-# Scale the input data
-input_scaled = scaler.transform(input)
+def predict_churn(df):
+    if model_choice == 'ANN':
+        # Scale the input data
+        return model.predict(scaler.transform(df)).ravel()
+    # Gradient boosting was trained on unscaled features
+    return gb_model.predict_proba(df)[:, 1]
 
 # Predict churn
-prediction = model.predict(input_scaled)
-prediction_prob = prediction[0][0]
+prediction_prob = predict_churn(input)[0]
 
 risk_level = (
     "High Risk 🔴" if prediction_prob > 0.7 else
@@ -109,8 +117,7 @@ uploaded_file = st.file_uploader("If you prefer, you may also upload a CSV for b
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-    df_scaled = scaler.transform(df)
-    preds = model.predict(df_scaled)
+    preds = predict_churn(df)
 
     df["Churn Probability"] = preds
 
